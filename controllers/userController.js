@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const mongoose = require('mongoose');
 
 // @desc    Cadastrar um novo usuário
 // @route   POST /api/users
@@ -52,8 +51,9 @@ exports.getUserById = async (req, res) => {
         res.status(200).json({ success: true, data: user });
     } catch (error) {
         console.error('Erro ao buscar usuário por ID:', error);
+        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
         if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Formato de ID de usuário inválido.' });
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
         }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar usuário', error: error.message });
     }
@@ -72,8 +72,9 @@ exports.deleteUser = async (req, res) => {
         res.status(200).json({ success: true, message: 'Usuário removido com sucesso.' });
     } catch (error) {
         console.error('Erro ao excluir usuário:', error);
+        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
         if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Formato de ID de usuário inválido.' });
+            return res.status(404).json({ message: 'Usuário não encontrado para exclusão.' });
         }
         res.status(500).json({ message: 'Erro interno do servidor ao excluir usuário', error: error.message });
     }
