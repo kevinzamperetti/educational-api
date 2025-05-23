@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const mongoose = require('mongoose'); // Importar mongoose para validação de ObjectId
 
 // @desc    Cadastrar um novo produto
 // @route   POST /api/products
@@ -13,9 +14,12 @@ exports.createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios: nome, descrição, preço, quantidade e categoria.' });
         }
 
-        // Validação: Verificar se a categoria existe (e tratar CastError como 404)
-        // O findById vai lançar um CastError se o 'category' não for um ObjectId válido.
-        // O catch abaixo vai capturar isso.
+        // --- Validação explícita do formato do ObjectId para a categoria ---
+        if (!mongoose.Types.ObjectId.isValid(category)) {
+            return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
+        }
+
+        // Validação: Verificar se a categoria existe
         const existingCategory = await Category.findById(category);
         if (!existingCategory) {
             return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
@@ -32,15 +36,12 @@ exports.createProduct = async (req, res) => {
         res.status(201).json({ success: true, data: product });
     } catch (error) {
         console.error('Erro ao cadastrar produto:', error);
-        // Tratar CastError para IDs inválidos (do campo 'category') como 404
-        if (error.name === 'CastError' && error.path === '_id' && error.model.modelName === 'Category') {
-            return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
-        }
-        // Erros de validação do Mongoose (ex: min, max)
+        // Erros de validação do Mongoose (ex: min, max, unique)
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
         }
+        // Para qualquer outro erro inesperado (incluindo outros tipos de CastError que não foram pre-validados)
         res.status(500).json({ message: 'Erro interno do servidor ao cadastrar produto', error: error.message });
     }
 };
@@ -63,6 +64,11 @@ exports.getProducts = async (req, res) => {
 // @access  Public
 exports.getProductById = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Produto não encontrado.' });
+        }
+
         const product = await Product.findById(req.params.id).populate('category', 'name');
 
         if (!product) {
@@ -72,10 +78,7 @@ exports.getProductById = async (req, res) => {
         res.status(200).json({ success: true, data: product });
     } catch (error) {
         console.error('Erro ao buscar produto por ID:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Produto não encontrado.' });
-        }
+        // Para qualquer outro erro inesperado
         res.status(500).json({ message: 'Erro interno do servidor ao buscar produto', error: error.message });
     }
 };
@@ -87,7 +90,11 @@ exports.updateProduct = async (req, res) => {
     try {
         const { category } = req.body;
 
-        // Primeiro, tenta encontrar o produto pelo ID do parâmetro
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
+        }
+
         let product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
@@ -95,13 +102,16 @@ exports.updateProduct = async (req, res) => {
 
         // Validação: Se a categoria for fornecida no body, verificar se ela existe
         if (category) {
+            // --- Validação explícita do formato do ObjectId para a categoria ---
+            if (!mongoose.Types.ObjectId.isValid(category)) {
+                return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
+            }
             const existingCategory = await Category.findById(category);
             if (!existingCategory) {
                 return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
             }
         }
 
-        // Atualiza o produto
         product = await Product.findByIdAndUpdate(req.params.id, req.body, {
             new: true, // Retorna o documento atualizado
             runValidators: true, // Executa as validações do schema
@@ -110,12 +120,6 @@ exports.updateProduct = async (req, res) => {
         res.status(200).json({ success: true, data: product });
     } catch (error) {
         console.error('Erro ao atualizar produto:', error);
-        // Tratar CastError para IDs inválidos (do produto ou da categoria) como 404
-        if (error.name === 'CastError') {
-            // Verifica se o erro é do ID do produto ou do ID da categoria
-            const message = (error.path === '_id' && error.model.modelName === 'Product') ? 'Produto não encontrado para atualização.' : 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.';
-            return res.status(404).json({ message: message });
-        }
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
@@ -129,8 +133,12 @@ exports.updateProduct = async (req, res) => {
 // @access  Public
 exports.deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Produto não encontrado para exclusão.' });
+        }
 
+        const product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Produto não encontrado para exclusão.' });
         }
@@ -140,10 +148,6 @@ exports.deleteProduct = async (req, res) => {
         res.status(200).json({ success: true, message: 'Produto removido com sucesso.' });
     } catch (error) {
         console.error('Erro ao excluir produto:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Produto não encontrado para exclusão.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao excluir produto', error: error.message });
     }
 };
@@ -153,6 +157,11 @@ exports.deleteProduct = async (req, res) => {
 // @access  Public
 exports.getProductsByCategory = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID da categoria ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.categoryId)) {
+            return res.status(404).json({ message: 'Categoria não encontrada.' });
+        }
+
         // Tentar encontrar a categoria primeiro para um erro mais específico
         const existingCategory = await Category.findById(req.params.categoryId);
         if (!existingCategory) {
@@ -168,10 +177,6 @@ exports.getProductsByCategory = async (req, res) => {
         res.status(200).json({ success: true, count: products.length, data: products });
     } catch (error) {
         console.error('Erro ao buscar produtos por categoria:', error);
-        // Se o ID da categoria não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Categoria não encontrada.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar produtos por categoria', error: error.message });
     }
 };

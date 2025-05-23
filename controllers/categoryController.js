@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const mongoose = require('mongoose');
 
 // @desc    Cadastrar uma nova categoria
 // @route   POST /api/categories
@@ -27,7 +28,6 @@ exports.createCategory = async (req, res) => {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
         }
-        // Para qualquer outro erro inesperado
         res.status(500).json({ message: 'Erro interno do servidor ao cadastrar categoria', error: error.message });
     }
 };
@@ -50,8 +50,12 @@ exports.getCategories = async (req, res) => {
 // @access  Public
 exports.getCategoryById = async (req, res) => {
     try {
-        const category = await Category.findById(req.params.id);
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Categoria não encontrada.' });
+        }
 
+        const category = await Category.findById(req.params.id);
         if (!category) {
             return res.status(404).json({ message: 'Categoria não encontrada.' });
         }
@@ -59,10 +63,6 @@ exports.getCategoryById = async (req, res) => {
         res.status(200).json({ success: true, data: category });
     } catch (error) {
         console.error('Erro ao buscar categoria por ID:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Categoria não encontrada.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar categoria', error: error.message });
     }
 };
@@ -74,8 +74,12 @@ exports.updateCategory = async (req, res) => {
     try {
         const { name, description } = req.body;
 
-        let category = await Category.findById(req.params.id);
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Categoria não encontrada para atualização.' });
+        }
 
+        let category = await Category.findById(req.params.id);
         if (!category) {
             return res.status(404).json({ message: 'Categoria não encontrada para atualização.' });
         }
@@ -88,10 +92,6 @@ exports.updateCategory = async (req, res) => {
         res.status(200).json({ success: true, data: category });
     } catch (error) {
         console.error('Erro ao atualizar categoria:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Categoria não encontrada para atualização.' });
-        }
         if (error.code === 11000) { // Erro de chave duplicada do MongoDB
             return res.status(400).json({ message: `A categoria com o nome '${req.body.name}' já existe.` });
         }
@@ -108,8 +108,12 @@ exports.updateCategory = async (req, res) => {
 // @access  Public
 exports.deleteCategory = async (req, res) => {
     try {
-        const category = await Category.findById(req.params.id);
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Categoria não encontrada para exclusão.' });
+        }
 
+        const category = await Category.findById(req.params.id);
         if (!category) {
             return res.status(404).json({ message: 'Categoria não encontrada para exclusão.' });
         }
@@ -119,10 +123,6 @@ exports.deleteCategory = async (req, res) => {
         res.status(200).json({ success: true, message: 'Categoria removida com sucesso.' });
     } catch (error) {
         console.error('Erro ao excluir categoria:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Categoria não encontrada para exclusão.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao excluir categoria', error: error.message });
     }
 };

@@ -55,18 +55,19 @@ const swaggerDocument = {
             - Requisições que utilizam IDs no caminho (path parameters) ou no corpo da requisição:
                 - Se o ID for inválido (formato incorreto) ou não for encontrado no banco de dados, a API retornará um status \`404 Not Found\` com uma mensagem clara de que o recurso não foi encontrado. Isso unifica o tratamento de erros para IDs.
         - Estoque: A criação de pedidos verifica a disponibilidade de estoque dos produtos. Se o estoque for insuficiente, a requisição retornará \`400 Bad Request\`.
-        - Status de Pedido: A atualização do status de um pedido aceita apenas valores pré-definidos (Pendente, Processando, Enviado, Entregue, Cancelado).
+        - Status de Pedido: A atualização do status de um pedido aceita apenas valores predefinidos (Pendente, Processando, Enviado, Entregue, Cancelado).
         - Códigos de Status HTTP:
             - \`200 OK\`: Requisição bem-sucedida.
             - \`201 Created\`: Recurso criado com sucesso.
             - \`400 Bad Request\`: Dados da requisição inválidos (validação falhou, campos faltando, etc.).
             - \`404 Not Found\`: Recurso não encontrado (ID inválido ou inexistente).
-            - \`500 Internal Server Error\`: Erro inesperado no servidor.`,
+            - \`500 Internal Server Error\`: Erro inesperado no servidor.
+        `,
         version: '1.0.0',
     },
     servers: [
         {
-            url: API_BASE_URL,
+            url: API_BASE_URL, // Usando a variável de ambiente aqui!
             description: 'Servidor da API',
         },
     ],

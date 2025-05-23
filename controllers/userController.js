@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // @desc    Cadastrar um novo usuário
 // @route   POST /api/users
@@ -15,7 +16,7 @@ exports.createUser = async (req, res) => {
         res.status(201).json({ success: true, data: user });
     } catch (error) {
         console.error('Erro ao cadastrar usuário:', error);
-        if (error.code === 11000) {
+        if (error.code === 11000) { // Erro de chave duplicada do MongoDB (para 'email' único)
             return res.status(400).json({ message: `O usuário com o email '${req.body.email}' já existe.` });
         }
         if (error.name === 'ValidationError') {
@@ -45,6 +46,11 @@ exports.getUsers = async (req, res) => {
 // @access  Public
 exports.getUserById = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado.' });
@@ -52,10 +58,6 @@ exports.getUserById = async (req, res) => {
         res.status(200).json({ success: true, data: user });
     } catch (error) {
         console.error('Erro ao buscar usuário por ID:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Usuário não encontrado.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar usuário', error: error.message });
     }
 };
@@ -65,6 +67,11 @@ exports.getUserById = async (req, res) => {
 // @access  Public
 exports.deleteUser = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Usuário não encontrado para exclusão.' });
+        }
+
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado para exclusão.' });
@@ -73,10 +80,6 @@ exports.deleteUser = async (req, res) => {
         res.status(200).json({ success: true, message: 'Usuário removido com sucesso.' });
     } catch (error) {
         console.error('Erro ao excluir usuário:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Usuário não encontrado para exclusão.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao excluir usuário', error: error.message });
     }
 };

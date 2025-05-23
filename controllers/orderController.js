@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // @desc    Cadastrar um novo pedido
 // @route   POST /api/orders
@@ -13,7 +14,12 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios: usuário, produtos e valor total, e adicione pelo menos um produto.' });
         }
 
-        // Validação: Verificar se o usuário existe (e tratar CastError como 404)
+        // --- Validação explícita do formato do ObjectId para o usuário ---
+        if (!mongoose.Types.ObjectId.isValid(user)) {
+            return res.status(404).json({ message: 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' });
+        }
+
+        // Validação: Verificar se o usuário existe
         const existingUser = await User.findById(user);
         if (!existingUser) {
             return res.status(404).json({ message: 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' });
@@ -26,17 +32,12 @@ exports.createOrder = async (req, res) => {
                 return res.status(400).json({ message: 'Cada item do produto deve ter um ID de produto válido e uma quantidade positiva.' });
             }
 
-            let product;
-            try {
-                product = await Product.findById(item.product);
-            } catch (productError) {
-                // Captura CastError específico para o ID do produto no loop
-                if (productError.name === 'CastError') {
-                    return res.status(404).json({ message: `Produto com ID '${item.product}' não encontrado.` });
-                }
-                throw productError; // Re-lança outros erros para o catch externo
+            // --- Validação explícita do formato do ObjectId para cada produto no array ---
+            if (!mongoose.Types.ObjectId.isValid(item.product)) {
+                return res.status(404).json({ message: `Produto com ID '${item.product}' não encontrado. Por favor, forneça um ID de produto válido e existente.` });
             }
 
+            const product = await Product.findById(item.product);
             if (!product) {
                 return res.status(404).json({ message: `Produto com ID '${item.product}' não encontrado.` });
             }
@@ -54,12 +55,6 @@ exports.createOrder = async (req, res) => {
         res.status(201).json({ success: true, data: order });
     } catch (error) {
         console.error('Erro ao cadastrar pedido:', error);
-        // Tratar CastError para IDs inválidos (do usuário ou produtos no array) como 404
-        if (error.name === 'CastError') {
-            // Verifica se o erro é do ID do usuário ou de um produto no array
-            const message = (error.path === '_id' && error.model.modelName === 'User') ? 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' : `Produto com ID '${error.value}' não encontrado.`;
-            return res.status(404).json({ message: message });
-        }
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
@@ -88,6 +83,11 @@ exports.getOrders = async (req, res) => {
 // @access  Public
 exports.getOrderById = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Pedido não encontrado.' });
+        }
+
         const order = await Order.findById(req.params.id)
             .populate('user', 'name email')
             .populate('products.product', 'name price');
@@ -98,10 +98,6 @@ exports.getOrderById = async (req, res) => {
         res.status(200).json({ success: true, data: order });
     } catch (error) {
         console.error('Erro ao buscar pedido por ID:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Pedido não encontrado.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar pedido', error: error.message });
     }
 };
@@ -117,8 +113,12 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ message: 'Por favor, forneça um status para atualização.' });
         }
 
-        const order = await Order.findById(req.params.id);
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Pedido não encontrado para atualização de status.' });
+        }
 
+        const order = await Order.findById(req.params.id);
         if (!order) {
             return res.status(404).json({ message: 'Pedido não encontrado para atualização de status.' });
         }
@@ -135,10 +135,6 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(200).json({ success: true, data: order });
     } catch (error) {
         console.error('Erro ao atualizar status do pedido:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Pedido não encontrado para atualização de status.' });
-        }
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
@@ -152,16 +148,17 @@ exports.updateOrderStatus = async (req, res) => {
 // @access  Public
 exports.deleteOrder = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Pedido não encontrado para exclusão.' });
+        }
+
         const order = await Order.findById(req.params.id);
         if (!order) {
             return res.status(404).json({ message: 'Pedido não encontrado para exclusão.' });
         }
 
         // Opcional: Reverter estoque dos produtos ao excluir o pedido
-        // É importante decidir a lógica de negócio aqui:
-        // - Se o pedido foi cancelado antes do envio, reverter o estoque faz sentido.
-        // - Se o pedido já foi enviado/entregue, talvez não faça sentido reverter o estoque.
-        // Por simplicidade, estamos revertendo aqui.
         for (const item of order.products) {
             const product = await Product.findById(item.product);
             if (product) {
@@ -174,10 +171,6 @@ exports.deleteOrder = async (req, res) => {
         res.status(200).json({ success: true, message: 'Pedido removido com sucesso.' });
     } catch (error) {
         console.error('Erro ao excluir pedido:', error);
-        // Se o ID não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Pedido não encontrado para exclusão.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao excluir pedido', error: error.message });
     }
 };
@@ -187,6 +180,11 @@ exports.deleteOrder = async (req, res) => {
 // @access  Public
 exports.getOrdersByUser = async (req, res) => {
     try {
+        // --- Validação explícita do formato do ObjectId para o ID do parâmetro ---
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
         const orders = await Order.find({ user: req.params.userId })
             .populate('user', 'name email')
             .populate('products.product', 'name price');
@@ -204,10 +202,6 @@ exports.getOrdersByUser = async (req, res) => {
         res.status(200).json({ success: true, count: orders.length, data: orders });
     } catch (error) {
         console.error('Erro ao buscar pedidos por usuário:', error);
-        // Se o ID do usuário não for um ObjectId válido do Mongoose, tratar como não encontrado (404)
-        if (error.name === 'CastError') {
-            return res.status(404).json({ message: 'Usuário não encontrado.' });
-        }
         res.status(500).json({ message: 'Erro interno do servidor ao buscar pedidos por usuário', error: error.message });
     }
 };
