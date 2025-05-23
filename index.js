@@ -10,7 +10,6 @@ const cors = require('cors');
 
 const app = express();
 
-// Conecta ao banco de dados
 connectDB();
 
 // Middleware para parsear JSON
@@ -67,7 +66,7 @@ const swaggerDocument = {
     },
     servers: [
         {
-            url: API_BASE_URL, // Usando a variável de ambiente aqui!
+            url: API_BASE_URL,
             description: 'Servidor da API',
         },
     ],
@@ -434,7 +433,7 @@ const swaggerDocument = {
                 summary: 'Cadastra um novo pedido',
                 tags: ['Pedidos'],
                 requestBody: {
-                    required: true,
+                    required: ['user', 'products'],
                     content: {
                         'application/json': {
                             schema: { $ref: '#/components/schemas/OrderInput' }
@@ -587,7 +586,7 @@ const swaggerDocument = {
                     description: { type: 'string', description: 'Descrição detalhada do produto', example: 'Smartphone de última geração com câmera de alta resolução.' },
                     price: { type: 'number', format: 'float', description: 'Preço do produto', example: 999.99 },
                     quantity: { type: 'integer', description: 'Quantidade em estoque', example: 50 },
-                    category: { type: 'string', description: 'ID da categoria à qual o produto pertence', example: '60d5ec49f8c6d1a2b4e5f6g7' } // Exemplo de ObjectId
+                    category: { type: 'string', description: 'ID da categoria à qual o produto pertence', example: '60d5ec49f8c6d1a2b4e5f6g7' }
                 }
             },
             Product: {
@@ -653,11 +652,11 @@ const swaggerDocument = {
             },
             OrderInput: {
                 type: 'object',
-                required: ['user', 'products', 'totalAmount'],
+                required: ['user', 'products'],
                 properties: {
                     user: { type: 'string', description: 'ID do usuário que fez o pedido', example: '60d5ec49f8c6d1a2b4e5f6g7' },
                     products: { type: 'array', items: { $ref: '#/components/schemas/OrderProduct' }, description: 'Lista de produtos e suas quantidades no pedido' },
-                    totalAmount: { type: 'number', format: 'float', description: 'Valor total do pedido', example: 1999.98 }
+                    totalAmount: { type: 'number', format: 'float', readOnly: true, description: 'Valor total do pedido (calculado pelo servidor)', example: 1999.98 }
                 }
             },
             Order: {

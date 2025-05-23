@@ -1,17 +1,17 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product');
-const User = require('../models/User');
-const mongoose = require('mongoose');
+const Product = require('../models/Product'); // Para verificar o estoque
+const User = require('../models/User'); // Para verificar o usuário
+const mongoose = require('mongoose'); // Importar mongoose para validação de ObjectId
 
 // @desc    Cadastrar um novo pedido
 // @route   POST /api/orders
 // @access  Public
 exports.createOrder = async (req, res) => {
     try {
-        const { user, products, totalAmount } = req.body;
+        const { user, products } = req.body;
 
-        if (!user || !products || products.length === 0 || totalAmount === undefined || totalAmount === null) {
-            return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios: usuário, produtos e valor total, e adicione pelo menos um produto.' });
+        if (!user || !products || products.length === 0) {
+            return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios: usuário e produtos, e adicione pelo menos um produto.' });
         }
 
         // --- Validação explícita do formato do ObjectId para o usuário ---
@@ -25,8 +25,10 @@ exports.createOrder = async (req, res) => {
             return res.status(404).json({ message: 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' });
         }
 
+        let calculatedTotalAmount = 0;
+        let productsForOrder = []; // Array para armazenar os produtos formatados para o pedido
+
         // Validação: Verificar e atualizar o estoque dos produtos
-        let productsWithDetails = [];
         for (const item of products) {
             if (!item.product || !item.quantity || item.quantity <= 0) {
                 return res.status(400).json({ message: 'Cada item do produto deve ter um ID de produto válido e uma quantidade positiva.' });
@@ -47,11 +49,14 @@ exports.createOrder = async (req, res) => {
             // Atualiza a quantidade do produto no estoque
             product.quantity -= item.quantity;
             await product.save();
-            productsWithDetails.push({ product: product._id, quantity: item.quantity });
+
+            // Adiciona ao total calculado
+            calculatedTotalAmount += product.price * item.quantity;
+            productsForOrder.push({ product: product._id, quantity: item.quantity });
         }
 
-        // Criar o pedido com os produtos e quantidades validadas
-        const order = await Order.create({ user, products: productsWithDetails, totalAmount });
+        // Criar o pedido com os produtos e o totalAmount calculado
+        const order = await Order.create({ user, products: productsForOrder, totalAmount: calculatedTotalAmount });
         res.status(201).json({ success: true, data: order });
     } catch (error) {
         console.error('Erro ao cadastrar pedido:', error);
