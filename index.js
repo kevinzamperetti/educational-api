@@ -35,7 +35,7 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
 const swaggerDocument = {
     openapi: '3.0.0',
     info: {
-        title: 'API de E-commerce Educacional',
+        title: 'API Educacional',
         description: 'Uma API simples para cadastro e gerenciamento de produtos, categorias, usuários e pedidos, desenvolvida para fins educacionais.',
         version: '1.0.0',
     },
