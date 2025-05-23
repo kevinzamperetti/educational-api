@@ -36,12 +36,37 @@ const swaggerDocument = {
     openapi: '3.0.0',
     info: {
         title: 'API Educacional',
-        description: 'Uma API simples para cadastro e gerenciamento de produtos, categorias, usuários e pedidos, desenvolvida para fins educacionais.',
+        description: `
+        Uma API simples para cadastro e gerenciamento de produtos, categorias, usuários e pedidos, desenvolvida para fins educacionais.
+
+        Ela permite o gerenciamento de produtos, categorias, usuários e pedidos.
+
+        **Funcionalidades Principais:**
+        - **Produtos:** Cadastro, listagem, busca por ID, atualização e exclusão de produtos.
+        - **Categorias:** Cadastro, listagem, busca por ID, atualização e exclusão de categorias.
+        - **Usuários:** Cadastro, listagem, busca por ID e exclusão de usuários.
+        - **Pedidos:** Criação de pedidos (com verificação de estoque), listagem, busca por ID, atualização de status e exclusão de pedidos.
+
+        **Regras de Negócio e Tratamento de Erros:**
+        - **Validação de Campos:** Todas as requisições POST e PUT validam a presença e o formato dos campos obrigatórios. Campos como 'name' (para categorias) e 'email' (para usuários) devem ser únicos.
+        - **Validação de IDs:**
+            - Ao criar/atualizar um produto, a 'category' fornecida deve corresponder a uma categoria existente.
+            - Ao criar um pedido, o 'user' e os 'products' referenciados devem existir.
+            - Requisições que utilizam IDs no caminho (path parameters) ou no corpo da requisição:
+                - Se o ID for inválido (formato incorreto) ou não for encontrado no banco de dados, a API retornará um status \`404 Not Found\` com uma mensagem clara de que o recurso não foi encontrado. Isso unifica o tratamento de erros para IDs.
+        - **Estoque:** A criação de pedidos verifica a disponibilidade de estoque dos produtos. Se o estoque for insuficiente, a requisição retornará \`400 Bad Request\`.
+        - **Status de Pedido:** A atualização do status de um pedido aceita apenas valores pré-definidos (Pendente, Processando, Enviado, Entregue, Cancelado).
+        - **Códigos de Status HTTP:**
+            - \`200 OK\`: Requisição bem-sucedida.
+            - \`201 Created\`: Recurso criado com sucesso.
+            - \`400 Bad Request\`: Dados da requisição inválidos (validação falhou, campos faltando, etc.).
+            - \`404 Not Found\`: Recurso não encontrado (ID inválido ou inexistente).
+            - \`500 Internal Server Error\`: Erro inesperado no servidor.`,
         version: '1.0.0',
     },
     servers: [
         {
-            url: API_BASE_URL, // Usando a variável de ambiente aqui!
+            url: API_BASE_URL,
             description: 'Servidor da API',
         },
     ],
@@ -76,7 +101,7 @@ const swaggerDocument = {
                         }
                     },
                     '400': { description: 'Requisição inválida (campos faltando ou inválidos)' },
-                    '404': { description: 'Categoria não encontrada' },
+                    '404': { description: 'Categoria não encontrada (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -119,7 +144,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Produto não encontrado' },
+                    '404': { description: 'Produto não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -147,7 +172,7 @@ const swaggerDocument = {
                         }
                     },
                     '400': { description: 'Requisição inválida (campos faltando ou inválidos)' },
-                    '404': { description: 'Produto ou Categoria não encontrado' },
+                    '404': { description: 'Produto ou Categoria não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -166,7 +191,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Produto não encontrado' },
+                    '404': { description: 'Produto não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -194,7 +219,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Nenhum produto encontrado para esta categoria ou Categoria não existe' },
+                    '404': { description: 'Categoria não encontrada (ID inválido ou inexistente) ou nenhum produto encontrado para esta categoria' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -263,7 +288,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Categoria não encontrada' },
+                    '404': { description: 'Categoria não encontrada (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -291,7 +316,7 @@ const swaggerDocument = {
                         }
                     },
                     '400': { description: 'Requisição inválida (campos faltando, inválidos ou nome duplicado)' },
-                    '404': { description: 'Categoria não encontrada' },
+                    '404': { description: 'Categoria não encontrada (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -310,7 +335,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Categoria não encontrada' },
+                    '404': { description: 'Categoria não encontrada (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -379,7 +404,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Usuário não encontrado' },
+                    '404': { description: 'Usuário não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -398,7 +423,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Usuário não encontrado' },
+                    '404': { description: 'Usuário não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -425,7 +450,7 @@ const swaggerDocument = {
                         }
                     },
                     '400': { description: 'Requisição inválida (campos faltando, inválidos ou estoque insuficiente)' },
-                    '404': { description: 'Usuário ou Produto(s) não encontrado(s)' },
+                    '404': { description: 'Usuário ou Produto(s) não encontrado(s) (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -468,7 +493,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Pedido não encontrado' },
+                    '404': { description: 'Pedido não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -487,7 +512,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Pedido não encontrado' },
+                    '404': { description: 'Pedido não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -517,7 +542,7 @@ const swaggerDocument = {
                         }
                     },
                     '400': { description: 'Requisição inválida (status inválido)' },
-                    '404': { description: 'Pedido não encontrado' },
+                    '404': { description: 'Pedido não encontrado (ID inválido ou inexistente)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -545,7 +570,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Nenhum pedido encontrado para este usuário ou Usuário não existe' },
+                    '404': { description: 'Usuário não encontrado (ID inválido ou inexistente) ou nenhum pedido encontrado para este usuário' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
