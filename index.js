@@ -13,14 +13,14 @@ const app = express();
 // Conecta ao banco de dados
 connectDB();
 
-// parse do JSON
+// Middleware para parsear JSON
 app.use(express.json());
 
 // Habilita o CORS (mantenha sua configuração de CORS aqui)
 // Permitir todas as origens (bom para desenvolvimento, mas cuidado em produção)
 app.use(cors());
 
-// Opção 2: Permitir apenas origens específicas (mais seguro para produção)
+// Permitir apenas origens específicas (mais seguro para produção)
 /*
 app.use(cors({
     origin: 'https://seu-frontend.com', // Substitua pela URL do seu frontend em produção
@@ -31,6 +31,7 @@ app.use(cors({
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
 
+// Definição do documento Swagger/OpenAPI como um objeto JavaScript
 const swaggerDocument = {
     openapi: '3.0.0',
     info: {
@@ -40,7 +41,7 @@ const swaggerDocument = {
     },
     servers: [
         {
-            url: API_BASE_URL,
+            url: API_BASE_URL, // Usando a variável de ambiente aqui!
             description: 'Servidor da API',
         },
     ],
@@ -74,7 +75,8 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida' },
+                    '400': { description: 'Requisição inválida (campos faltando ou inválidos)' },
+                    '404': { description: 'Categoria não encontrada' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -144,8 +146,8 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida' },
-                    '404': { description: 'Produto não encontrado' },
+                    '400': { description: 'Requisição inválida (campos faltando ou inválidos)' },
+                    '404': { description: 'Produto ou Categoria não encontrado' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -192,7 +194,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Nenhum produto encontrado para esta categoria' },
+                    '404': { description: 'Nenhum produto encontrado para esta categoria ou Categoria não existe' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }
@@ -218,7 +220,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida' },
+                    '400': { description: 'Requisição inválida (campos faltando, inválidos ou nome duplicado)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -288,7 +290,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida' },
+                    '400': { description: 'Requisição inválida (campos faltando, inválidos ou nome duplicado)' },
                     '404': { description: 'Categoria não encontrada' },
                     '500': { description: 'Erro interno do servidor' }
                 }
@@ -334,7 +336,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida' },
+                    '400': { description: 'Requisição inválida (campos faltando, inválidos ou email duplicado)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -422,8 +424,8 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '400': { description: 'Requisição inválida (ex: estoque insuficiente, dados faltando)' },
-                    '404': { description: 'Usuário ou produto não encontrado' },
+                    '400': { description: 'Requisição inválida (campos faltando, inválidos ou estoque insuficiente)' },
+                    '404': { description: 'Usuário ou Produto(s) não encontrado(s)' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             },
@@ -543,7 +545,7 @@ const swaggerDocument = {
                             }
                         }
                     },
-                    '404': { description: 'Nenhum pedido encontrado para este usuário' },
+                    '404': { description: 'Nenhum pedido encontrado para este usuário ou Usuário não existe' },
                     '500': { description: 'Erro interno do servidor' }
                 }
             }

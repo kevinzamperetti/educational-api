@@ -12,6 +12,6 @@ const router = express.Router();
 
 router.route('/').post(createProduct).get(getProducts);
 router.route('/:id').get(getProductById).put(updateProduct).delete(deleteProduct);
-router.route('/category/:categoryId').get(getProductsByCategory); // Nova rota para buscar produtos por categoria
+router.route('/category/:categoryId').get(getProductsByCategory);
 
 module.exports = router;

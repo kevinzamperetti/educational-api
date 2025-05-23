@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const mongoose = require('mongoose');
 
 // @desc    Cadastrar uma nova categoria
 // @route   POST /api/categories
@@ -9,7 +10,7 @@ exports.createCategory = async (req, res) => {
 
         // Validação básica
         if (!name || !description) {
-            return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios.' });
+            return res.status(400).json({ message: 'Por favor, preencha todos os campos obrigatórios: nome e descrição.' });
         }
 
         const category = await Category.create({
@@ -19,8 +20,15 @@ exports.createCategory = async (req, res) => {
 
         res.status(201).json({ success: true, data: category });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao cadastrar categoria', error: error.message });
+        console.error('Erro ao cadastrar categoria:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ message: `A categoria com o nome '${req.body.name}' já existe.` });
+        }
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+        res.status(500).json({ message: 'Erro interno do servidor ao cadastrar categoria', error: error.message });
     }
 };
 
@@ -32,8 +40,8 @@ exports.getCategories = async (req, res) => {
         const categories = await Category.find();
         res.status(200).json({ success: true, count: categories.length, data: categories });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao buscar categorias', error: error.message });
+        console.error('Erro ao buscar categorias:', error);
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar categorias', error: error.message });
     }
 };
 
@@ -45,13 +53,16 @@ exports.getCategoryById = async (req, res) => {
         const category = await Category.findById(req.params.id);
 
         if (!category) {
-            return res.status(404).json({ message: 'Categoria não encontrada' });
+            return res.status(404).json({ message: 'Categoria não encontrada.' });
         }
 
         res.status(200).json({ success: true, data: category });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao buscar categoria', error: error.message });
+        console.error('Erro ao buscar categoria por ID:', error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Formato de ID de categoria inválido.' });
+        }
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar categoria', error: error.message });
     }
 };
 
@@ -65,7 +76,7 @@ exports.updateCategory = async (req, res) => {
         let category = await Category.findById(req.params.id);
 
         if (!category) {
-            return res.status(404).json({ message: 'Categoria não encontrada' });
+            return res.status(404).json({ message: 'Categoria não encontrada para atualização.' });
         }
 
         category = await Category.findByIdAndUpdate(req.params.id, req.body, {
@@ -75,8 +86,18 @@ exports.updateCategory = async (req, res) => {
 
         res.status(200).json({ success: true, data: category });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao atualizar categoria', error: error.message });
+        console.error('Erro ao atualizar categoria:', error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Formato de ID de categoria inválido.' });
+        }
+        if (error.code === 11000) {
+            return res.status(400).json({ message: `A categoria com o nome '${req.body.name}' já existe.` });
+        }
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+        res.status(500).json({ message: 'Erro interno do servidor ao atualizar categoria', error: error.message });
     }
 };
 
@@ -88,14 +109,17 @@ exports.deleteCategory = async (req, res) => {
         const category = await Category.findById(req.params.id);
 
         if (!category) {
-            return res.status(404).json({ message: 'Categoria não encontrada' });
+            return res.status(404).json({ message: 'Categoria não encontrada para exclusão.' });
         }
 
-        await category.deleteOne(); // Usar deleteOne() para remover o documento
+        await category.deleteOne();
 
-        res.status(200).json({ success: true, message: 'Categoria removida com sucesso' });
+        res.status(200).json({ success: true, message: 'Categoria removida com sucesso.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao excluir categoria', error: error.message });
+        console.error('Erro ao excluir categoria:', error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Formato de ID de categoria inválido.' });
+        }
+        res.status(500).json({ message: 'Erro interno do servidor ao excluir categoria', error: error.message });
     }
 };
