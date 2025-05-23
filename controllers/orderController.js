@@ -1,6 +1,6 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product'); // Para verificar o estoque
-const User = require('../models/User'); // Para verificar o usuário
+const Product = require('../models/Product');
+const User = require('../models/User');
 
 // @desc    Cadastrar um novo pedido
 // @route   POST /api/orders
@@ -26,9 +26,18 @@ exports.createOrder = async (req, res) => {
                 return res.status(400).json({ message: 'Cada item do produto deve ter um ID de produto válido e uma quantidade positiva.' });
             }
 
-            const product = await Product.findById(item.product);
+            let product;
+            try {
+                product = await Product.findById(item.product);
+            } catch (productError) {
+                // Captura CastError específico para o ID do produto no loop
+                if (productError.name === 'CastError') {
+                    return res.status(404).json({ message: `Produto com ID '${item.product}' não encontrado.` });
+                }
+                throw productError; // Re-lança outros erros para o catch externo
+            }
+
             if (!product) {
-                // Tratar CastError para IDs de produto inválidos no array como 404
                 return res.status(404).json({ message: `Produto com ID '${item.product}' não encontrado.` });
             }
             if (product.quantity < item.quantity) {
@@ -47,7 +56,8 @@ exports.createOrder = async (req, res) => {
         console.error('Erro ao cadastrar pedido:', error);
         // Tratar CastError para IDs inválidos (do usuário ou produtos no array) como 404
         if (error.name === 'CastError') {
-            const message = error.path === 'user' ? 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' : `Produto com ID '${error.value}' não encontrado.`;
+            // Verifica se o erro é do ID do usuário ou de um produto no array
+            const message = (error.path === '_id' && error.model.modelName === 'User') ? 'Usuário não encontrado. Por favor, forneça um ID de usuário válido e existente.' : `Produto com ID '${error.value}' não encontrado.`;
             return res.status(404).json({ message: message });
         }
         if (error.name === 'ValidationError') {

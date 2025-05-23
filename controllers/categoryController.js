@@ -27,7 +27,7 @@ exports.createCategory = async (req, res) => {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
         }
-        // Para qualquer outro erro inesperado, incluindo CastError se o ID fosse passado no body (o que não é o caso aqui)
+        // Para qualquer outro erro inesperado
         res.status(500).json({ message: 'Erro interno do servidor ao cadastrar categoria', error: error.message });
     }
 };

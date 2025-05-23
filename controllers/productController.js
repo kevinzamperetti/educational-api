@@ -1,5 +1,5 @@
 const Product = require('../models/Product');
-const Category = require('../models/Category'); // Importa o modelo Category
+const Category = require('../models/Category');
 
 // @desc    Cadastrar um novo produto
 // @route   POST /api/products
@@ -14,6 +14,8 @@ exports.createProduct = async (req, res) => {
         }
 
         // Validação: Verificar se a categoria existe (e tratar CastError como 404)
+        // O findById vai lançar um CastError se o 'category' não for um ObjectId válido.
+        // O catch abaixo vai capturar isso.
         const existingCategory = await Category.findById(category);
         if (!existingCategory) {
             return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
@@ -30,8 +32,8 @@ exports.createProduct = async (req, res) => {
         res.status(201).json({ success: true, data: product });
     } catch (error) {
         console.error('Erro ao cadastrar produto:', error);
-        // Tratar CastError para IDs inválidos como 404 para entidades relacionadas
-        if (error.name === 'CastError' && error.path === 'category') {
+        // Tratar CastError para IDs inválidos (do campo 'category') como 404
+        if (error.name === 'CastError' && error.path === '_id' && error.model.modelName === 'Category') {
             return res.status(404).json({ message: 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.' });
         }
         // Erros de validação do Mongoose (ex: min, max)
@@ -85,13 +87,13 @@ exports.updateProduct = async (req, res) => {
     try {
         const { category } = req.body;
 
+        // Primeiro, tenta encontrar o produto pelo ID do parâmetro
         let product = await Product.findById(req.params.id);
-
         if (!product) {
             return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
         }
 
-        // Validação: Se a categoria for fornecida, verificar se ela existe (e tratar CastError como 404)
+        // Validação: Se a categoria for fornecida no body, verificar se ela existe
         if (category) {
             const existingCategory = await Category.findById(category);
             if (!existingCategory) {
@@ -99,6 +101,7 @@ exports.updateProduct = async (req, res) => {
             }
         }
 
+        // Atualiza o produto
         product = await Product.findByIdAndUpdate(req.params.id, req.body, {
             new: true, // Retorna o documento atualizado
             runValidators: true, // Executa as validações do schema
@@ -109,7 +112,8 @@ exports.updateProduct = async (req, res) => {
         console.error('Erro ao atualizar produto:', error);
         // Tratar CastError para IDs inválidos (do produto ou da categoria) como 404
         if (error.name === 'CastError') {
-            const message = error.path === '_id' ? 'Produto não encontrado para atualização.' : 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.';
+            // Verifica se o erro é do ID do produto ou do ID da categoria
+            const message = (error.path === '_id' && error.model.modelName === 'Product') ? 'Produto não encontrado para atualização.' : 'Categoria não encontrada. Por favor, forneça um ID de categoria válido e existente.';
             return res.status(404).json({ message: message });
         }
         if (error.name === 'ValidationError') {
@@ -149,13 +153,13 @@ exports.deleteProduct = async (req, res) => {
 // @access  Public
 exports.getProductsByCategory = async (req, res) => {
     try {
-        const products = await Product.find({ category: req.params.categoryId }).populate('category', 'name');
-
-        // Verificar se a categoria existe para diferenciar "categoria vazia" de "categoria inexistente"
+        // Tentar encontrar a categoria primeiro para um erro mais específico
         const existingCategory = await Category.findById(req.params.categoryId);
         if (!existingCategory) {
             return res.status(404).json({ message: 'Categoria não encontrada.' });
         }
+
+        const products = await Product.find({ category: req.params.categoryId }).populate('category', 'name');
 
         if (products.length === 0) {
             return res.status(200).json({ success: true, count: 0, data: [], message: 'Nenhum produto encontrado para esta categoria.' });
